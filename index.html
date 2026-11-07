@@ -38,8 +38,8 @@
 </div>
 <script>
     const SPREADSHEET_ID = '15QUEdq24porL2wY6_6NL_sVizgL7MQLbAPgnJTkzk-w';
-    // Chiediamo a Google solo la colonna A dove si trovano i tuoi due numeri
-    const url = `https://google.com{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1&range=A1:A2`;
+    // Link universale per scaricare il file senza dover indovinare il nome del foglio (Sheet1/Foglio1)
+    const url = `https://google.com{SPREADSHEET_ID}/export?format=csv`;
 
     function pulisciNumero(testo) {
         if (!testo) return 0;
@@ -52,17 +52,21 @@
             const response = await fetch(url);
             const text = await response.text();
             
-            // Dividiamo le righe ricevute
+            // Separiamo il testo riga per riga
             const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
             
             let raccolti = 0;
             let obiettivo = 35000;
 
             if (lines.length >= 1) {
-                raccolti = pulisciNumero(lines[0]);
+                // Legge la prima riga (A1)
+                let elementi = lines[0].split(',');
+                raccolti = pulisciNumero(elementi[0]);
             }
             if (lines.length >= 2) {
-                obiettivo = pulisciNumero(lines[1]);
+                // Legge la seconda riga (A2)
+                let elementi = lines[1].split(',');
+                obiettivo = pulisciNumero(elementi[0]);
             }
 
             if (obiettivo <= 0) obiettivo = 35000;
