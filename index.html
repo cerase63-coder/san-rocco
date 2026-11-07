@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raccolta Fondi San Rocco</title>
+    <link href="https://googleapis.com" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            padding: 30px;
+            max-width: 450px;
+            width: 100%;
+            text-align: center;
+            border-top: 5px solid #1a365d;
+        }
+        h1 {
+            font-size: 24px;
+            color: #1a365d;
+            margin-bottom: 5px;
+        }
+        h2 {
+            font-size: 16px;
+            color: #718096;
+            font-weight: 400;
+            margin-top: 0;
+            margin-bottom: 25px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #4a5568;
+        }
+        .amount-collected {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2b6cb0;
+            margin-bottom: 20px;
+        }
+        .progress-container {
+            background-color: #edf2f7;
+            border-radius: 20px;
+            position: relative;
+            height: 24px;
+            width: 100%;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            background: linear-gradient(90deg, #3182ce, #2b6cb0);
+            height: 100%;
+            width: 0%;
+            border-radius: 20px;
+            transition: width 1s ease-in-out;
+        }
+        .percentage {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 25px;
+        }
+        .info-text {
+            font-size: 13px;
+            color: #718096;
+            line-height: 1.5;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 15px;
+        }
+        .loading {
+            color: #718096;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>Chiesa di San Rocco</h1>
+    <h2>e San Francesco di Paola</h2>
+    <div style="font-size: 14px; color: #4a5568; margin-bottom: 5px;">Restauro Conservativo della Facciata</div>
+    
+    <div id="loader" class="loading">Caricamento dati in tempo reale...</div>
+    
+    <div id="content" style="display: none;">
+        <div class="amount-collected" id="collected-text">€ 0</div>
+        
+        <div class="progress-container">
+            <div class="progress-bar" id="bar"></div>
+        </div>
+        
+        <div class="percentage" id="percent-text">0% completato</div>
+        
+        <div class="stats">
+            <span>Raccolti ad oggi</span>
+            <span>Obiettivo: <strong id="goal-text">€ 35.000</strong></span>
+        </div>
+    </div>
+
+    <div class="info-text">
+        Le offerte vengono raccolte direttamente in parrocchia o tramite bonifico bancario. Il contatore viene aggiornato in tempo reale dal parroco tramite sistema sicuro.
+    </div>
+</div>
+
+<script>
+    // ID del tuo file Google Fogli già inserito
+    const SPREADSHEET_ID = '15QUEdq24porL2wY6_6NL_sVizgL7MQLbAPgnJTkzk-w';
+    const url = `https://google.com{SPREADSHEET_ID}/gviz/tq?tqx=out:csv`;
+
+    function pulisciNumero(testo) {
+        if (!testo) return 0;
+        // Rimuove virgolette, spazi, simboli dell'euro e i punti usati come separatori delle migliaia
+        let pulito = testo.replace(/"/g, '').replace(/€/g, '').replace(/\s/g, '').replace(/\./g, '');
+        // Sostituisce la virgola dei decimali con il punto per il calcolo del computer
+        pulito = pulito.replace(/,/g, '.');
+        return parseFloat(pulito) || 0;
+    }
+
+    async function loadData() {
+        try {
+            const response = await fetch(url);
+            const text = await response.text();
+            
+            const lines = text.split('\n');
+            if(lines.length >= 2) {
+                // Leggiamo la riga 1 (Raccolti) e riga 2 (Obiettivo) dal tuo foglio
+                const rigaRaccolti = lines[0].split(',');
+                const rigaObiettivo = lines[1].split(',');
+
+                // Prendiamo il valore presente nella seconda colonna (B1 e B2 nel CSV)
+                const raccolti = pulisciNumero(rigaRaccolti[1]);
+                const obiettivo = pulisciNumero(rigaObiettivo[1]);
+                
+                // Calcolo della percentuale di avanzamento
+                let percentuale = Math.round((raccolti / obiettivo) * 100);
+                if (percentuale > 100) percentuale = 100;
+                if (percentuale < 0 || isNaN(percentuale)) percentuale = 0;
+
+                // Formattazione italiana dei prezzi (es. 1.250 €)
+                const formatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+
+                // Aggiorniamo gli elementi grafici della pagina
+                document.getElementById('collected-text').innerText = formatter.format(raccolti);
+                document.getElementById('goal-text').innerText = formatter.format(obiettivo);
+                document.getElementById('percent-text').innerText = `${percentuale}% completato`;
+                document.getElementById('bar').style.width = `${percentuale}%`;
+                
+                // Mostriamo la grafica finale e nascondiamo la scritta di caricamento
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+            }
+        } catch (error) {
+            console.error("Errore durante la lettura del foglio Google:", error);
+            document.getElementById('loader').innerText = "Impossibile caricare i dati. Verifica la connessione o i permessi del foglio.";
+        }
+    }
+
+    // Esegui la funzione all'apertura del sito
+    loadData();
+</script>
+
+</body>
+</html>
