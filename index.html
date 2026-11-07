@@ -38,22 +38,12 @@
 </div>
 <script>
     const SPREADSHEET_ID = '15QUEdq24porL2wY6_6NL_sVizgL7MQLbAPgnJTkzk-w';
-    // Usiamo il formato tqx=out:csv
-    const url = `https://google.com{SPREADSHEET_ID}/gviz/tq?tqx=out:csv`;
+    // Chiediamo a Google solo la colonna A dove si trovano i tuoi due numeri
+    const url = `https://google.com{SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1&range=A1:A2`;
 
-    function estraiNumero(testo) {
+    function pulisciNumero(testo) {
         if (!testo) return 0;
-        // Rimuove virgolette, spazi, simboli € e pulisce la formattazione
-        let pulito = testo.replace(/"/g, '').replace(/€/g, '').replace(/\s/g, '');
-        // Se c'è un punto delle migliaia (es. 1.250) e nessuna virgola, lo togliamo
-        if (pulito.includes('.') && !pulito.includes(',')) {
-            let parti = pulito.split('.');
-            if (parti[parti.length - 1].length !== 2) { // Non sono centesimi
-                pulito = pulito.replace(/\./g, '');
-            }
-        }
-        // Sistema le virgole italiane in punti per il computer
-        pulito = pulito.replace(/,/g, '.');
+        let pulito = testo.replace(/"/g, '').replace(/€/g, '').replace(/\s/g, '').replace(/\./g, '').replace(/,/g, '.');
         return parseFloat(pulito) || 0;
     }
 
@@ -62,22 +52,19 @@
             const response = await fetch(url);
             const text = await response.text();
             
-            // Dividiamo il file riga per riga
-            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            // Dividiamo le righe ricevute
+            const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
             
             let raccolti = 0;
             let obiettivo = 35000;
 
             if (lines.length >= 1) {
-                // Prende direttamente la prima riga del foglio (cella A1)
-                raccolti = estraiNumero(lines[0]);
+                raccolti = pulisciNumero(lines[0]);
             }
             if (lines.length >= 2) {
-                // Prende direttamente la seconda riga del foglio (cella A2)
-                obiettivo = estraiNumero(lines[1]);
+                obiettivo = pulisciNumero(lines[1]);
             }
 
-            // Se per errore ha letto zero o le etichette invertite, diamo dei valori di sicurezza
             if (obiettivo <= 0) obiettivo = 35000;
 
             let percentuale = Math.round((raccolti / obiettivo) * 100);
@@ -94,7 +81,7 @@
             document.getElementById('loader').style.display = 'none';
             document.getElementById('content').style.display = 'block';
         } catch (error) {
-            document.getElementById('loader').innerText = "Errore nel caricamento. Verifica la connessione.";
+            document.getElementById('loader').innerText = "Errore nel caricamento dei dati.";
         }
     }
     loadData();
