@@ -116,15 +116,12 @@
 </div>
 
 <script>
-    // ID del tuo file Google Fogli già inserito
     const SPREADSHEET_ID = '15QUEdq24porL2wY6_6NL_sVizgL7MQLbAPgnJTkzk-w';
     const url = `https://google.com{SPREADSHEET_ID}/gviz/tq?tqx=out:csv`;
 
     function pulisciNumero(testo) {
         if (!testo) return 0;
-        // Rimuove virgolette, spazi, simboli dell'euro e i punti usati come separatori delle migliaia
         let pulito = testo.replace(/"/g, '').replace(/€/g, '').replace(/\s/g, '').replace(/\./g, '');
-        // Sostituisce la virgola dei decimali con il punto per il calcolo del computer
         pulito = pulito.replace(/,/g, '.');
         return parseFloat(pulito) || 0;
     }
@@ -132,43 +129,47 @@
     async function loadData() {
         try {
             const response = await fetch(url);
+            if (!response.ok) throw new Error("Errore di rete");
             const text = await response.text();
             
             const lines = text.split('\n');
-            if(lines.length >= 2) {
-                // Leggiamo la riga 1 (Raccolti) e riga 2 (Obiettivo) dal tuo foglio
-                const rigaRaccolti = lines[0].split(',');
-                const rigaObiettivo = lines[1].split(',');
+            
+            let raccolti = 0;
+            let obiettivo = 35000;
 
-                // Prendiamo il valore presente nella seconda colonna (B1 e B2 nel CSV)
-                const raccolti = pulisciNumero(rigaRaccolti[1]);
-                const obiettivo = pulisciNumero(rigaObiettivo[1]);
-                
-                // Calcolo della percentuale di avanzamento
-                let percentuale = Math.round((raccolti / obiettivo) * 100);
-                if (percentuale > 100) percentuale = 100;
-                if (percentuale < 0 || isNaN(percentuale)) percentuale = 0;
+            lines.forEach(line => {
+                const colonne = line.split(',');
+                if (colonne.length >= 2) {
+                    const etichetta = colonne[0].replace(/"/g, '').trim();
+                    const valore = colonne[1];
+                    
+                    if (etichetta.toLowerCase().includes('raccolti')) {
+                        raccolti = pulisciNumero(valore);
+                    } else if (etichetta.toLowerCase().includes('obiettivo')) {
+                        obiettivo = pulisciNumero(valore);
+                    }
+                }
+            });
+            
+            let percentuale = Math.round((raccolti / obiettivo) * 100);
+            if (percentuale > 100) percentuale = 100;
+            if (percentuale < 0 || isNaN(percentuale)) percentuale = 0;
 
-                // Formattazione italiana dei prezzi (es. 1.250 €)
-                const formatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+            const formatter = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
 
-                // Aggiorniamo gli elementi grafici della pagina
-                document.getElementById('collected-text').innerText = formatter.format(raccolti);
-                document.getElementById('goal-text').innerText = formatter.format(obiettivo);
-                document.getElementById('percent-text').innerText = `${percentuale}% completato`;
-                document.getElementById('bar').style.width = `${percentuale}%`;
-                
-                // Mostriamo la grafica finale e nascondiamo la scritta di caricamento
-                document.getElementById('loader').style.display = 'none';
-                document.getElementById('content').style.display = 'block';
-            }
+            document.getElementById('collected-text').innerText = formatter.format(raccolti);
+            document.getElementById('goal-text').innerText = formatter.format(obiettivo);
+            document.getElementById('percent-text').innerText = `${percentuale}% completato`;
+            document.getElementById('bar').style.width = `${percentuale}%`;
+            
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
         } catch (error) {
-            console.error("Errore durante la lettura del foglio Google:", error);
-            document.getElementById('loader').innerText = "Impossibile caricare i dati. Verifica la connessione o i permessi del foglio.";
+            console.error("Errore:", error);
+            document.getElementById('loader').innerText = "Impossibile caricare i dati. Verifica che il foglio Google sia impostato su 'Chiunque abbia il link'.";
         }
     }
 
-    // Esegui la funzione all'apertura del sito
     loadData();
 </script>
 
